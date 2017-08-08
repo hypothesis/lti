@@ -15,7 +15,6 @@ pytestmark = pytest.mark.usefixtures(
     'log',
     'requests',
     'render',
-    'traceback',
     'pack_state',
     'oauth',
     'web',
@@ -32,16 +31,17 @@ class SharedLTISetupTests(object):
         with pytest.raises(AttributeError, message="'NoneType' object has no attribute 'strip'"):
             launch.lti_setup(pyramid_request)
 
-        log.error.assert_called_once_with(StringStartingWith(
-            'oauth_consumer_key cannot be None'))
+        log.error.assert_called_once_with(
+            'oauth_consumer_key cannot be None %s',
+            pyramid_request.POST,
+        )
 
     def test_theres_no_course_param_it_returns_an_error_page(
-            self, pyramid_request, log, simple_response):
+            self, pyramid_request, simple_response):
         del pyramid_request.POST[constants.CUSTOM_CANVAS_COURSE_ID]
 
         returned = launch.lti_setup(pyramid_request)
 
-        log.error.assert_called_once_with('course cannot be None')
         simple_response.assert_called_once_with(
             'No course number. Was Privacy set to Public for this '
             'installation of the Hypothesis LTI app? If not please do so (or '
@@ -55,7 +55,7 @@ class SharedLTISetupTests(object):
             'TEST_OAUTH_CONSUMER_KEY')
 
     def test_if_we_dont_have_the_consumer_key_it_returns_an_error_page(
-            self, pyramid_request, log, traceback, simple_response):
+            self, pyramid_request, simple_response):
         # get_lti_token() raises KeyError if the given consumer key doesn't
         # exist in the db.
         pyramid_request.auth_data.get_lti_token.side_effect = KeyError
@@ -65,10 +65,6 @@ class SharedLTISetupTests(object):
         error_message = (
             "We don't have the Consumer Key TEST_OAUTH_CONSUMER_KEY in our "
             "database yet.")
-        assert log.error.call_args_list == [
-            mock.call(error_message),
-            mock.call(traceback.print_exc.return_value),
-        ]
         simple_response.assert_called_once_with(error_message)
         assert returned == simple_response.return_value
 
@@ -81,11 +77,6 @@ class TestLTISetupWhenWeDontHaveAnAccessToken(SharedLTISetupTests):
     db, but we don't yet have an access token for that consumer key.
 
     """
-    def test_it_logs_that_its_getting_an_access_token(self, pyramid_request, log):
-        launch.lti_setup(pyramid_request)
-
-        log.info.assert_any_call('lti_setup: getting token')
-
     def test_it_packs_the_launch_params_into_a_string(
             self, pyramid_request, pack_state):
         launch.lti_setup(pyramid_request)
@@ -140,13 +131,6 @@ class TestLTISetupWhenWeOurAccessTokenHasExpired(SharedLTISetupTests):
             url='https://TEST_CANVAS_SERVER.com/api/v1/courses/TEST_COURSE_ID/files?per_page=100',
             headers={'Authorization': 'Bearer TEST_OAUTH_ACCESS_TOKEN'},
         )
-
-    def test_it_logs_that_its_refreshing_the_access_token(self, 
-                                                          pyramid_request,
-                                                          log):
-        launch.lti_setup(pyramid_request)
-
-        log.info.assert_any_call('lti_setup: refreshing token')
 
     def test_it_starts_an_oauth_flow_to_refresh_the_access_token(self, 
                                                                  pyramid_request,
@@ -437,18 +421,6 @@ class TestLTISetupWhenWeHaveAValidAccessToken(SharedLTISetupTests):
         return requests
 
 
-class StringStartingWith(object):
-    """An object that's equal to any string starting with ``starting_with``."""
-    def __init__(self, starting_with):
-        self.starting_with = starting_with
-
-    def __eq__(self, other):
-        return other.startswith(self.starting_with)
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-
 @pytest.fixture
 def pyramid_request(pyramid_request):
     # These params need to actually be in the query string because our code
@@ -500,11 +472,6 @@ def requests(patch):
 @pytest.fixture
 def render(patch):
     return patch('lti.views.launch.render')
-
-
-@pytest.fixture
-def traceback(patch):
-    return patch('lti.views.launch.traceback')
 
 
 @pytest.fixture

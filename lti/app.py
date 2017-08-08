@@ -1,7 +1,6 @@
 ﻿import urllib
 import urlparse
 import requests
-import traceback
 import re
 import logging
 import filelock
@@ -15,9 +14,6 @@ from pyramid.renderers import render
 from lti.config import configure
 from lti import util
 from lti import constants
-from lti.views import oauth
-from lti.views import web
-from lti.views import pdf
 
 
 log = logging.getLogger(__name__)
