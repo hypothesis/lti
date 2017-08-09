@@ -16,7 +16,8 @@ from lti import util
 log = logging.getLogger(__name__)
 
 
-def make_authorization_request(request, state, refresh=False):
+def make_authorization_request(
+        request, target_link_uri, oauth_consumer_key, refresh=False):
     """
     Send an OAuth 2.0 authorization request.
 
@@ -29,9 +30,6 @@ def make_authorization_request(request, state, refresh=False):
 
     """
     try:
-        unpacked_state = util.unpack_state(state)
-        log.info('make_authorization_request: state: %s', unpacked_state)
-        oauth_consumer_key = unpacked_state[constants.OAUTH_CONSUMER_KEY]
         canvas_server = request.auth_data.get_canvas_server(oauth_consumer_key)
 
         if refresh:
@@ -45,7 +43,7 @@ def make_authorization_request(request, state, refresh=False):
             canvas_server,
             oauth_consumer_key,
             redirect_uri,
-            state
+            util.pack_state({'target_link_uri': target_link_uri}),
         )
         ret = HTTPFound(location=token_redirect_uri)
         log.info('make_authorization_request ' + token_redirect_uri)
@@ -122,22 +120,15 @@ def oauth_callback(request, type_=None):  # pylint: disable=too-many-locals
         parsed_query_string = urlparse.parse_qs(request.query_string)
         code = parsed_query_string['code'][0]
         state = parsed_query_string['state'][0]
-        unpacked_state = util.unpack_state(state)
         log.info('oauth_callback: %s', state)
 
-        course = unpacked_state[constants.CUSTOM_CANVAS_COURSE_ID]
-        user = unpacked_state[constants.CUSTOM_CANVAS_USER_ID]
-        oauth_consumer_key = unpacked_state[constants.OAUTH_CONSUMER_KEY]
-        ext_content_return_url = unpacked_state[constants.EXT_CONTENT_RETURN_URL]
+        target_link_uri = util.unpack_state(state)['target_link_uri']
 
-        assignment_type = unpacked_state[constants.ASSIGNMENT_TYPE]
-        assignment_name = unpacked_state[constants.ASSIGNMENT_NAME]
-        assignment_value = unpacked_state[constants.ASSIGNMENT_VALUE]
+        oauth_consumer_key = urlparse.parse_qs(
+            urlparse.urlparse(target_link_uri).query)['oauth_consumer_key'][0]
 
-        canvas_client_secret = request.auth_data.get_lti_secret(
-            oauth_consumer_key)
-        lti_refresh_token = request.auth_data.get_lti_refresh_token(
-            oauth_consumer_key)
+        canvas_client_secret = request.auth_data.get_lti_secret(oauth_consumer_key)
+        lti_refresh_token = request.auth_data.get_lti_refresh_token(oauth_consumer_key)
         canvas_server = request.auth_data.get_canvas_server(oauth_consumer_key)
         url = '%s/login/oauth2/token' % canvas_server
         grant_type = 'authorization_code' if type_ == 'token' else 'refresh_token'
@@ -159,15 +150,7 @@ def oauth_callback(request, type_=None):  # pylint: disable=too-many-locals
         request.auth_data.set_tokens(oauth_consumer_key,
                                      lti_token,
                                      lti_refresh_token)
-        return HTTPFound(location=request.route_url('lti_setup', _query={
-            constants.CUSTOM_CANVAS_COURSE_ID: course,
-            constants.CUSTOM_CANVAS_USER_ID: user,
-            constants.OAUTH_CONSUMER_KEY: oauth_consumer_key,
-            constants.EXT_CONTENT_RETURN_URL: ext_content_return_url,
-            constants.ASSIGNMENT_TYPE: assignment_type,
-            constants.ASSIGNMENT_NAME: assignment_name,
-            constants.ASSIGNMENT_VALUE: assignment_value,
-        }))
+        return HTTPFound(location=target_link_uri)
     except:  # pylint: disable=bare-except
         response = traceback.print_exc()  # pylint: disable=assignment-from-no-return
         log.error(response)

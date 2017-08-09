@@ -70,11 +70,6 @@ def lti_setup(request):
     if response.status_code == 401:
         return oauth.make_authorization_request(
             request, util.pack_state(post_data), refresh=True)
-    files = response.json()
-    while 'next' in response.links:
-        url = response.links['next']['url']
-        response = sess.get(url=url, headers={'Authorization': 'Bearer %s' % lti_token})
-        files = files + response.json()
 
     assignment_type = post_data[constants.ASSIGNMENT_TYPE]
     assignment_name = post_data[constants.ASSIGNMENT_NAME]
@@ -98,28 +93,3 @@ def lti_setup(request):
                                 lis_result_sourcedid=lis_result_sourcedid,
                                 name=assignment_name,
                                 value=assignment_value)
-
-    return_url = util.requests.get_post_or_query_param(request, constants.EXT_CONTENT_RETURN_URL)
-    if return_url is None:  # this is an oauth redirect so get what we sent ourselves
-        return_url = util.requests.get_post_or_query_param(request, 'return_url')
-
-    launch_url_template = (
-        '%s/lti_setup?assignment_type=__TYPE__&assignment_name=__NAME__'
-        '&assignment_value=__VALUE__&return_url=__RETURN_URL__' % request.registry.settings['lti_server'])
-
-    pdf_choices = ''
-    if files:
-        pdf_choices += '<ul>'
-        for pdf_file in files:
-            file_id = str(pdf_file['id'])
-            name = pdf_file['display_name']
-            if not name.lower().endswith('.pdf'):
-                continue
-            pdf_choices += '<li><input type="radio" name="pdf_choice" onclick="javascript:go()" value="%s" id="%s">%s</li>' % (name, file_id, name)
-        pdf_choices += '</ul>'
-
-    return Response(render('lti:templates/document_chooser.html.jinja2', dict(
-        return_url=return_url,
-        launch_url=launch_url_template,
-        pdf_choices=pdf_choices,
-    )))
