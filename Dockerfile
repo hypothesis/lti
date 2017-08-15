@@ -2,7 +2,7 @@ FROM gliderlabs/alpine:3.4
 MAINTAINER Hypothes.is Project and contributors
 
 # Install system build and runtime dependencies.
-RUN apk-install ca-certificates python supervisor
+RUN apk-install ca-certificates python py-pip supervisor postgresql-dev
 
 # Create the lti user, group, home directory and package directory.
 RUN addgroup -S lti \
