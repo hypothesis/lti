@@ -52,7 +52,6 @@ def lti_submit(request, oauth_consumer_key=None, lis_outcome_service_url=None, l
         response = 'Something is wrong. %s %s' % (r.status_code, r.text)        
     return util.simple_response(response)
 
-
 def create_app(global_config, **settings):  # pylint: disable=unused-argument
     config = configure(settings=settings)
 
@@ -66,6 +65,7 @@ def create_app(global_config, **settings):  # pylint: disable=unused-argument
     config.include('lti.routes')
     config.include('lti.services')
 
+    config.add_static_view(name='pdfjs', path='lti:static/pdfjs')
     config.add_static_view(name='export', path='lti:static/export')
 
     config.add_static_view(name='static', path='lti:static')
