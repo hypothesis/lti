@@ -4,18 +4,13 @@ from __future__ import unicode_literals
 
 
 def includeme(config):
-    config.add_route('about', '/')
+  config.add_route('welcome', '/welcome')
+  config.add_route('config_xml', '/config_xml')
+  config.add_route('module_item_configurations', '/module_item_configurations')
 
-    config.add_route('token_callback', '/token_callback')
-    config.add_route('refresh_callback', '/refresh_callback')
+  # lti routes
+  config.add_route('lti_launches', '/lti_launches')
+  config.add_route('content_item_selection', '/content_item_selection')
 
-    config.add_route('config_xml', '/config.xml')
 
-    config.add_route('lti_credentials', '/lti_credentials')
-    config.add_route('lti_setup', '/lti_setup')
-    config.add_route('canvas_resource_selection', '/canvas/resource_selection')
-    config.add_route('lti_submit', '/lti_submit')
-    config.add_route('lti_export', '/lti_export')
 
-    # Health check
-    config.add_route('status', '/_status')
