@@ -1,3 +1,5 @@
+**Archived** in favor of <https://github.com/hypothesis/lms>
+
 [![Build Status](https://travis-ci.org/hypothesis/lti.svg?branch=master)](https://travis-ci.org/hypothesis/lti)
 [![codecov](https://codecov.io/gh/hypothesis/lti/branch/master/graph/badge.svg)](https://codecov.io/gh/hypothesis/lti)
 [![Updates](https://pyup.io/repos/github/hypothesis/lti/shield.svg)](https://pyup.io/repos/github/hypothesis/lti/)
